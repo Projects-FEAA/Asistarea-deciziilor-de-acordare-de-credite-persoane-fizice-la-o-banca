@@ -1,7 +1,7 @@
 import streamlit as st
 from module.data_loader import load_data
 import module.cerinta_1_pondere as c1 
-# import module.cerinta_2_risc as c2 # Le vei decomenta când le creezi
+import module.cerinta_2_risc as c2 # Le vei decomenta când le creezi
 # import module.cerinta_3_trend as c3
 import module.cerinta_4_dobanzi as c4
 
@@ -66,7 +66,7 @@ elif optiune == "1. Ponderea Creditelor":
     c1.render_page(df)
     
 elif optiune == "2. Analiză Rău-Platnici":
-    st.title("2. Evidențierea clienților rău platnici")
+    c2.render_page(df)
 
 elif optiune == "4. Impact Dobânzi":
     c4.render_page(df)
