@@ -6,12 +6,11 @@ def render_page(df):
     st.title("1. Ponderea tipurilor de credit")
     st.markdown("Analiza distribuției portofoliului de credite acordate persoanelor fizice, cu opțiuni de filtrare și vizualizare dinamică.")
     
-    # --- FILTRE INTERACTIVE ÎN BARA LATERALĂ (SPECIFICE ACESTEI PAGINI) ---
-    
-    # 1. Slider pentru vârstă
-    filterCol1, filterCol2 = st.columns(2)
+    # --- FILTRE INTERACTIVE (SPECIFICE ACESTEI PAGINI) ---
+    filterCol1, filterCol2, filterCol3 = st.columns(3)
 
     with filterCol1:
+        # 1. Slider pentru vârstă
         min_v, max_v = int(df['person_age'].min()), int(df['person_age'].max())
         interval_varsta = st.slider("Selectează intervalul de vârstă", min_v, max_v, (min_v, max_v), key="c1_age")
 
@@ -20,8 +19,17 @@ def render_page(df):
         locuinte = ["Toate"] + list(df['person_home_ownership'].unique())
         locuinta_aleasa = st.selectbox("Statut locuință", locuinte, key="c1_home")
 
+    with filterCol3:
+        # 3. Multiselect (combo box) pentru scopul creditului - implicit sunt toate selectate
+        scopuri = sorted(df['loan_intent'].dropna().unique())
+        scop_ales = st.multiselect(
+            "Scopul Creditului:",
+            options=scopuri,
+            default=scopuri,
+            key="c1_intent",
+            placeholder="Alege unul sau mai multe scopuri"
+        )
 
-        
     # --- APLICAREA FILTRELOR PE DATAFRAME ---
     df_f = df[
         (df['person_age'] >= interval_varsta[0]) & 
@@ -29,6 +37,8 @@ def render_page(df):
     ]
     if locuinta_aleasa != "Toate":
         df_f = df_f[df_f['person_home_ownership'] == locuinta_aleasa]
+
+    df_f = df_f[df_f['loan_intent'].isin(scop_ales)]
         
     # Verificăm dacă au rămas date după filtrare
     if df_f.empty:
