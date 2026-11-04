@@ -40,11 +40,14 @@ def render_page(df):
         )
 
     with filterCol4:
-        # 4. Selectbox pentru intervalul de venit anual
-        venit_ales = st.selectbox(
+        # 4. Multiselect pentru intervalele de venit anual - implicit sunt toate selectate
+        intervale_venit = list(INTERVALE_VENIT.keys())
+        venituri_alese = st.multiselect(
             "Interval de venit anual",
-            ["Toate"] + list(INTERVALE_VENIT.keys()),
-            key="c1_income"
+            options=intervale_venit,
+            default=intervale_venit,
+            key="c1_income",
+            placeholder="Alege unul sau mai multe intervale"
         )
 
     # --- APLICAREA FILTRELOR PE DATAFRAME ---
@@ -57,9 +60,13 @@ def render_page(df):
 
     df_f = df_f[df_f['loan_intent'].isin(scop_ales)]
 
-    if venit_ales != "Toate":
-        v_min, v_max = INTERVALE_VENIT[venit_ales]
-        df_f = df_f[(df_f['person_income'] >= v_min) & (df_f['person_income'] < v_max)]
+    # Dacă sunt selectate toate intervalele, nu filtrăm (rămân și rândurile fără venit)
+    if len(venituri_alese) < len(intervale_venit):
+        masca_venit = pd.Series(False, index=df_f.index)
+        for eticheta in venituri_alese:
+            v_min, v_max = INTERVALE_VENIT[eticheta]
+            masca_venit |= (df_f['person_income'] >= v_min) & (df_f['person_income'] < v_max)
+        df_f = df_f[masca_venit]
         
     # Verificăm dacă au rămas date după filtrare
     if df_f.empty:
