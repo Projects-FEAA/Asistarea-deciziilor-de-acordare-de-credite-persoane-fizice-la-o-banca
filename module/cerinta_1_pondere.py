@@ -2,12 +2,21 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd
 
+# Intervale de venit anual (min inclusiv, max exclusiv) - le poți ajusta
+INTERVALE_VENIT = {
+    "Sub 30.000 $": (0, 30_000),
+    "30.000 - 50.000 $": (30_000, 50_000),
+    "50.000 - 75.000 $": (50_000, 75_000),
+    "75.000 - 100.000 $": (75_000, 100_000),
+    "Peste 100.000 $": (100_000, float("inf")),
+}
+
 def render_page(df):
     st.title("1. Ponderea tipurilor de credit")
     st.markdown("Analiza distribuției portofoliului de credite acordate persoanelor fizice, cu opțiuni de filtrare și vizualizare dinamică.")
     
     # --- FILTRE INTERACTIVE (SPECIFICE ACESTEI PAGINI) ---
-    filterCol1, filterCol2, filterCol3 = st.columns(3)
+    filterCol1, filterCol2, filterCol3, filterCol4 = st.columns(4)
 
     with filterCol1:
         # 1. Slider pentru vârstă
@@ -30,6 +39,14 @@ def render_page(df):
             placeholder="Alege unul sau mai multe scopuri"
         )
 
+    with filterCol4:
+        # 4. Selectbox pentru intervalul de venit anual
+        venit_ales = st.selectbox(
+            "Interval de venit anual",
+            ["Toate"] + list(INTERVALE_VENIT.keys()),
+            key="c1_income"
+        )
+
     # --- APLICAREA FILTRELOR PE DATAFRAME ---
     df_f = df[
         (df['person_age'] >= interval_varsta[0]) & 
@@ -39,6 +56,10 @@ def render_page(df):
         df_f = df_f[df_f['person_home_ownership'] == locuinta_aleasa]
 
     df_f = df_f[df_f['loan_intent'].isin(scop_ales)]
+
+    if venit_ales != "Toate":
+        v_min, v_max = INTERVALE_VENIT[venit_ales]
+        df_f = df_f[(df_f['person_income'] >= v_min) & (df_f['person_income'] < v_max)]
         
     # Verificăm dacă au rămas date după filtrare
     if df_f.empty:
