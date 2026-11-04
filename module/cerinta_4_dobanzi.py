@@ -1,5 +1,6 @@
 import streamlit as st
 import plotly.express as px
+import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 
@@ -96,13 +97,18 @@ def render_page(df):
             opacity=0.5
         )
 
-        # Linie de trend OLS calculată cu numpy (fără statsmodels)
+        # Linie de trend OLS calculată cu numpy
         if len(df_sample) >= 2 and df_sample["loan_int_rate"].nunique() > 1:
             panta, interceptor = np.polyfit(df_sample["loan_int_rate"], df_sample["loan_amnt"], 1)
-            x_line = np.array([df_sample["loan_int_rate"].min(), df_sample["loan_int_rate"].max()])
+            x_line = np.linspace(
+                df_sample["loan_int_rate"].min(),
+                df_sample["loan_int_rate"].max(),
+                100
+            )
             fig_scatter.add_scatter(
                 x=x_line, y=panta * x_line + interceptor,
-                mode="lines", name="Trend (OLS)", line=dict(color="red")
+                mode="lines", name="Trend (OLS)", line=dict(color="red"),
+                hovertemplate="Trend <br> Dobândă: %{x:.2f}%<br>Trend: %{y:,.0f} $<extra></extra>"
             )
         st.plotly_chart(fig_scatter, use_container_width=True)
 
@@ -130,7 +136,6 @@ def render_page(df):
         elast = st.slider(
             "Elasticitatea cererii (ipoteză)",
             min_value=-3.0, max_value=-0.1, value=-1.0, step=0.1,
-            help="-1 înseamnă: dobânda +10% => cererea -10%"
         )
 
     def prognoza(delta_pp, e):
@@ -152,36 +157,57 @@ def render_page(df):
         f"cererea totală ar ajunge la ~{volum_nou:,.0f} $ ({diferenta / volum_baza:+.1%})."
     )
 
-    # Curba cererii pentru mai multe valori ale elasticității
-    deltas = [x / 2 for x in range(-10, 11)]  # -5 ... +5 pp
-    rows = []
-    for e in (-0.5, -1.0, -2.0):
-        for d in deltas:
-            rows.append({
-                "Modificare dobândă (pp)": d,
-                "Cerere estimată ($)": prognoza(d, e),
-                "Elasticitate": f"ε = {e}"
-            })
-    curba_df = pd.DataFrame(rows)
-
-    fig_prog = px.line(
-        curba_df,
-        x="Modificare dobândă (pp)",
-        y="Cerere estimată ($)",
-        color="Elasticitate",
-        title="Cererea estimată în funcție de variația dobânzii"
+    # ------------------------------------------------------------------
+    # GRAFIC: trend observat (linie plină) + prognoză (linie punctată)
+    # ------------------------------------------------------------------
+    # Trend observat: volumul cerut pe fiecare punct procentual de dobândă
+    df_valid['rata_rotunjita'] = df_valid['loan_int_rate'].round()
+    istoric = (
+        df_valid.groupby('rata_rotunjita')['loan_amnt']
+        .sum()
+        .reset_index()
+        .rename(columns={'rata_rotunjita': 'Rata dobânzii (%)',
+                         'loan_amnt': 'Cerere (volum $)'})
+        .sort_values('Rata dobânzii (%)')
     )
-    fig_prog.add_scatter(
-        x=[delta], y=[volum_nou], mode="markers",
-        marker=dict(size=12, color="red"), name="Scenariul ales"
+    istoric = istoric[istoric['Rata dobânzii (%)'] > 0]
+
+    # Prognoza: aplicăm modelul de elasticitate pe fiecare punct al curbei
+    prognoza_df = istoric.copy()
+    prognoza_df['Rata nouă (%)'] = prognoza_df['Rata dobânzii (%)'] + delta
+    # Evităm ratele noi <= 0 (ar da împărțiri / puteri nedefinite)
+    prognoza_df = prognoza_df[prognoza_df['Rata nouă (%)'] > 0]
+    prognoza_df['Cerere estimată ($)'] = (
+        prognoza_df['Cerere (volum $)']
+        * (prognoza_df['Rata nouă (%)'] / prognoza_df['Rata dobânzii (%)']) ** elast
+    )
+
+    fig_prog = go.Figure()
+
+    # Linia plină = datele reale
+    fig_prog.add_trace(go.Scatter(
+        x=istoric['Rata dobânzii (%)'],
+        y=istoric['Cerere (volum $)'],
+        mode='lines+markers',
+        name='Cerere observată',
+        line=dict(color='#1f77b4', width=3),
+    ))
+
+    # Linia punctată = prognoza (aceeași curbă, după modificarea dobânzii)
+    fig_prog.add_trace(go.Scatter(
+        x=prognoza_df['Rata nouă (%)'],
+        y=prognoza_df['Cerere estimată ($)'],
+        mode='lines+markers',
+        name=f'Prognoză (Δ={delta:+.1f} pp, ε={elast})',
+        line=dict(color='red', width=3, dash='dot'),
+    ))
+
+    fig_prog.update_layout(
+        title="Cererea observată și prognoza (linie punctată)",
+        xaxis_title="Rata dobânzii (%)",
+        yaxis_title="Cerere (volum $)",
     )
     st.plotly_chart(fig_prog, use_container_width=True)
-
-    st.info(
-        "Setul de date conține credite acordate, nu cerere pură, iar dobânda depinde de "
-        "riscul clientului (corelația dobândă–sumă este pozitivă, ~0.15). De aceea, "
-        "elasticitatea nu poate fi estimată direct din date și este o ipoteză de scenariu."
-    )
 
 
 # Rulare directă (opțional): streamlit run cerere_dobanda.py
