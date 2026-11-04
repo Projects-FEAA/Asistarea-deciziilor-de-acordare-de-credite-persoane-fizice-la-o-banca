@@ -44,7 +44,6 @@ def render_page(df):
             min_v, max_v, (min_v, max_v),
             key="c4_age"
         )
-        
 
     # Eliminăm rândurile fără dobândă setată pentru acuratețea analizei matematice
     df_valid = df.dropna(subset=['loan_int_rate']).copy()
@@ -69,10 +68,8 @@ def render_page(df):
     cerere_df.columns = ['Interval Dobândă', 'Cerere Totală (Volum $)']
     cerere_df['Interval Dobândă'] = cerere_df['Interval Dobândă'].astype(str)
 
-    # UI Layout
-
     # ------------------------------------------------------------------
-    # COLOANA 1: volumul cererii pe intervale (tip de grafic selectabil)
+    # Volumul cererii pe intervale (tip de grafic selectabil)
     # ------------------------------------------------------------------
     st.subheader("Volumul Cererii pe Intervale")
 
@@ -126,8 +123,6 @@ def render_page(df):
         )
 
     st.plotly_chart(fig_vol, use_container_width=True)
-
-    
 
     # ------------------------------------------------------------------
     # PROGNOZĂ: cererea la reducerea / creșterea dobânzii (elasticitate)
@@ -208,27 +203,29 @@ def render_page(df):
         mode='lines+markers',
         name='Cerere observată',
         line=dict(color='#1f77b4', width=3),
+        hovertemplate="Dobândă: %{x}%<br>Cerere actuală: %{y:,.0f} $<extra></extra>"
     ))
 
-    # Linia punctată = prognoza (aceeași curbă, după modificarea dobânzii)
+    # Linia punctată = prognoza, desenată la aceeași dobândă de pornire ca linia albastră,
+    # ca distanța verticală dintre cele două linii să arate efectul modificării dobânzii
     fig_prog.add_trace(go.Scatter(
-        x=prognoza_df['Rata nouă (%)'],
+        x=prognoza_df['Rata dobânzii (%)'],
         y=prognoza_df['Cerere estimată ($)'],
         mode='lines+markers',
         name=f'Prognoză (Δ={delta:+.1f} pp, ε={elast})',
         line=dict(color='red', width=3, dash='dot'),
+        customdata=prognoza_df['Rata nouă (%)'],
+        hovertemplate=(
+            "Dobândă actuală: %{x}%<br>"
+            "Rata nouă: %{customdata}%<br>"
+            "Cerere estimată: %{y:,.0f} $<extra></extra>"
+        )
     ))
 
     fig_prog.update_layout(
         title="Cererea observată și prognoza (linie punctată)",
-        xaxis_title="Rata dobânzii (%)",
+        xaxis_title="Rata dobânzii actuale (%)",
         yaxis_title="Cerere (volum $)",
     )
     st.plotly_chart(fig_prog, use_container_width=True)
 
-
-# Rulare directă (opțional): streamlit run cerere_dobanda.py
-if __name__ == "__main__":
-    st.set_page_config(page_title="Cerere vs. dobândă", layout="wide")
-    _df = pd.read_csv("credit_risk_dataset_final_proiect.csv")
-    render_page(_df)
