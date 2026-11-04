@@ -38,18 +38,19 @@ def render_page(df):
         )
 
     with f2:
-        # Limităm la 80 de ani: în date există vârste nerealiste (ex. 144)
-        varsta_min, varsta_max = st.slider(
-            "Vârsta solicitantului",
-            min_value=int(df['person_age'].min()), max_value=80,
-            value=(int(df['person_age'].min()), 80)
+        min_v, max_v = int(df['person_age'].min()), int(df['person_age'].max())
+        interval_varsta = st.slider(
+            "Selectează intervalul de vârstă",
+            min_v, max_v, (min_v, max_v),
+            key="c4_age"
         )
+        
 
     # Eliminăm rândurile fără dobândă setată pentru acuratețea analizei matematice
     df_valid = df.dropna(subset=['loan_int_rate']).copy()
 
     # Aplicăm filtrele
-    df_valid = df_valid[df_valid['person_age'].between(varsta_min, varsta_max)]
+    df_valid = df_valid[df_valid['person_age'].between(interval_varsta[0], interval_varsta[1])]
     df_valid = df_valid[df_valid['loan_intent'].isin(tipuri_alese)]
 
     if df_valid.empty:
@@ -66,13 +67,28 @@ def render_page(df):
     # Agregăm cererea totală (suma cerută) pe fiecare interval de dobândă
     cerere_df = df_valid.groupby('Interval_Dobanda', observed=False)['loan_amnt'].sum().reset_index()
     cerere_df.columns = ['Interval Dobândă', 'Cerere Totală (Volum $)']
+    cerere_df['Interval Dobândă'] = cerere_df['Interval Dobândă'].astype(str)
 
     # UI Layout
-    col1, col2 = st.columns(2)
 
-    with col1:
-        st.subheader("Volumul Cererii pe Intervale")
-        fig_bar = px.bar(
+    # ------------------------------------------------------------------
+    # COLOANA 1: volumul cererii pe intervale (tip de grafic selectabil)
+    # ------------------------------------------------------------------
+    st.subheader("Volumul Cererii pe Intervale")
+
+    tip_chart_vol = st.selectbox(
+        "Alege tipul de reprezentare grafică:",
+        [
+            "Grafic cu Bare (Bar Chart)",
+            "Grafic Circular (Donut)",
+            "Hartă Proporțională (Treemap)",
+            "Grafic cu Linie (Line Chart)",
+        ],
+        key="c4_chart_vol"
+    )
+
+    if tip_chart_vol == "Grafic cu Bare (Bar Chart)":
+        fig_vol = px.bar(
             cerere_df,
             x='Interval Dobândă',
             y='Cerere Totală (Volum $)',
@@ -81,36 +97,37 @@ def render_page(df):
             color='Cerere Totală (Volum $)',
             color_continuous_scale='Blues'
         )
-        st.plotly_chart(fig_bar, use_container_width=True)
 
-    with col2:
-        st.subheader("Relația dobândă – sumă (Scatter)")
-        # Folosim un eșantion pentru performanță vizuală bună în browser
-        df_sample = df_valid.sample(n=min(2000, len(df_valid)), random_state=42)
+    elif tip_chart_vol == "Grafic Circular (Donut)":
+        fig_vol = px.pie(
+            cerere_df,
+            values='Cerere Totală (Volum $)',
+            names='Interval Dobândă',
+            hole=0.4,
+            title="Ponderea volumului de credite pe tranșe de dobândă"
+        )
+        fig_vol.update_traces(textposition='inside', textinfo='percent+label', sort=False)
 
-        fig_scatter = px.scatter(
-            df_sample,
-            x="loan_int_rate",
-            y="loan_amnt",
-            title="Relația Dobândă vs. Sumă Solicitată (Eșantion)",
-            labels={"loan_int_rate": "Rata Dobânzii (%)", "loan_amnt": "Suma Solicitată ($)"},
-            opacity=0.5
+    elif tip_chart_vol == "Hartă Proporțională (Treemap)":
+        fig_vol = px.treemap(
+            cerere_df,
+            path=['Interval Dobândă'],
+            values='Cerere Totală (Volum $)',
+            title="Ponderea ierarhică a volumului pe tranșe de dobândă"
         )
 
-        # Linie de trend OLS calculată cu numpy
-        if len(df_sample) >= 2 and df_sample["loan_int_rate"].nunique() > 1:
-            panta, interceptor = np.polyfit(df_sample["loan_int_rate"], df_sample["loan_amnt"], 1)
-            x_line = np.linspace(
-                df_sample["loan_int_rate"].min(),
-                df_sample["loan_int_rate"].max(),
-                100
-            )
-            fig_scatter.add_scatter(
-                x=x_line, y=panta * x_line + interceptor,
-                mode="lines", name="Trend (OLS)", line=dict(color="red"),
-                hovertemplate="Trend <br> Dobândă: %{x:.2f}%<br>Trend: %{y:,.0f} $<extra></extra>"
-            )
-        st.plotly_chart(fig_scatter, use_container_width=True)
+    else:  # Line chart
+        fig_vol = px.line(
+            cerere_df,
+            x='Interval Dobândă',
+            y='Cerere Totală (Volum $)',
+            markers=True,
+            title="Evoluția volumului de credite pe tranșe de dobândă"
+        )
+
+    st.plotly_chart(fig_vol, use_container_width=True)
+
+    
 
     # ------------------------------------------------------------------
     # PROGNOZĂ: cererea la reducerea / creșterea dobânzii (elasticitate)
