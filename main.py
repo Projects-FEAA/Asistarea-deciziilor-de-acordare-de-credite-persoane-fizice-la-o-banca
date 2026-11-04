@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from module.data_loader import load_data
 import module.cerinta_1_pondere as c1 
 import module.cerinta_2_risc as c2 # Le vei decomenta când le creezi
@@ -27,21 +28,34 @@ if optiune == "Baza de Date (Grid)":
     st.title("Explorarea Bazei de Date")
     st.write("Folosește filtrele pentru a restrânge setul de date. **Click pe numele coloanelor pentru a sorta tabelul.**")
     
-    # --- FILTRE INTERACTIVE ---
-    st.sidebar.header("Filtrează Datele")
-    
-    # Filtru Multiselect (Combo Box)
-    scopuri = df['loan_intent'].unique()
-    scop_ales = st.sidebar.multiselect("Scopul Creditului:", options=scopuri, default=scopuri)
-    
-    # Filtru Slider (Interval valori)
-    varsta_min, varsta_max = int(df['person_age'].min()), int(df['person_age'].max())
-    varsta_interval = st.sidebar.slider("Interval Vârstă:", varsta_min, varsta_max, (20, 50))
-    
-    # Filtru Selectbox (O singură opțiune)
-    proprietate = df['person_home_ownership'].unique().tolist()
-    proprietate.insert(0, "Toate") # Adăugăm opțiunea de a nu filtra
-    proprietate_aleasa = st.sidebar.selectbox("Statut Locuință:", options=proprietate)
+    f1, f2, f3, f4 = st.columns(4)
+
+    with f1:
+        # Filtru Multiselect (Combo Box)
+        scopuri = df['loan_intent'].unique()
+        scop_ales = st.multiselect("Scopul Creditului:", options=scopuri, default=scopuri)
+
+    with f2:
+        # Filtru Slider (Interval valori)
+        varsta_min, varsta_max = int(df['person_age'].min()), int(df['person_age'].max())
+        varsta_interval = st.slider("Interval Vârstă:", varsta_min, varsta_max, (20, 50))
+
+    with f3:
+        # Filtru Selectbox (O singură opțiune)
+        proprietate = df['person_home_ownership'].unique().tolist()
+        proprietate.insert(0, "Toate") # Adăugăm opțiunea de a nu filtra
+        proprietate_aleasa = st.selectbox("Statut Locuință:", options=proprietate)
+
+    with f4:
+        # Filtru Multiselect pentru intervalele de venit anual - implicit sunt toate selectate
+        # (intervalele sunt definite o singură dată, în modulul paginii 1)
+        intervale_venit = list(c1.INTERVALE_VENIT.keys())
+        venituri_alese = st.multiselect(
+            "Interval Venit Anual:",
+            options=intervale_venit,
+            default=intervale_venit
+        )
+
     
     # --- APLICAREA FILTRELOR PE PANDAS ---
     # Creăm o mască de filtrare
@@ -53,6 +67,17 @@ if optiune == "Baza de Date (Grid)":
     
     if proprietate_aleasa != "Toate":
         df_filtrat = df_filtrat[df_filtrat['person_home_ownership'] == proprietate_aleasa]
+
+    # Dacă sunt selectate toate intervalele, nu filtrăm (rămân și rândurile fără venit)
+    if len(venituri_alese) < len(intervale_venit):
+        masca_venit = pd.Series(False, index=df_filtrat.index)
+        for eticheta in venituri_alese:
+            v_min, v_max = c1.INTERVALE_VENIT[eticheta]
+            masca_venit |= (
+                (df_filtrat['person_income'] >= v_min) &
+                (df_filtrat['person_income'] < v_max)
+            )
+        df_filtrat = df_filtrat[masca_venit]
         
     # --- AFIȘAREA GRID-ULUI ---
     # use_container_width întinde grid-ul pe tot ecranul, hide_index ascunde numerele de rând inutile
@@ -70,5 +95,3 @@ elif optiune == "2. Analiză Rău-Platnici":
 
 elif optiune == "4. Impact Dobânzi":
     c4.render_page(df)
-    
-# ... restul opțiunilor ...
