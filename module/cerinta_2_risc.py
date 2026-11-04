@@ -203,3 +203,90 @@ def render_page(df):
 
     with st.expander("Vezi cifrele detaliate"):
         st.dataframe(analiza, hide_index=True)
+    # --- LISTA CLIENȚILOR ---
+    st.divider()
+    st.subheader("Lista clienților")
+
+    coloane_sortare = [
+        "Suma creditului ($)", "Venit anual ($)", "Vârstă", "Dobândă (%)",
+        "Rata din venit (%)", "Grad de risc", "ID client",
+    ]
+
+    with st.container(border=True):
+        l1, l2 = st.columns(2)
+        with l1:
+            afisare = st.radio(
+                "Arată:",
+                ["Rău platnici", "Bun platnici", "Toți clienții"],
+                horizontal=True,
+                key="c2_lista",
+            )
+        with l2:
+            grade_alese = st.multiselect(
+                "Grad de risc", sorted(df['loan_grade'].unique()), key="c2_lista_grad", placeholder="Toate"
+            )
+
+        l3, l4 = st.columns(2)
+        with l3:
+            sortare = st.selectbox("Sortează după:", coloane_sortare, key="c2_sortare")
+        with l4:
+            ordine = st.radio(
+                "Ordine:", ["Descrescător", "Crescător"], horizontal=True, key="c2_ordine"
+            )
+
+    if afisare == "Rău platnici":
+        lista = df_f[df_f['loan_status'] == 1]
+    elif afisare == "Bun platnici":
+        lista = df_f[df_f['loan_status'] == 0]
+    else:
+        lista = df_f
+
+    if grade_alese:
+        lista = lista[lista['loan_grade'].isin(grade_alese)]
+
+    if lista.empty:
+        st.info("Nu există astfel de clienți în segmentul selectat.")
+        return
+
+    # Tabel nou, cu denumiri în română, un cod unic pentru fiecare client și un status ușor de recunoscut
+    tabel_clienti = pd.DataFrame({
+        'ID client': [f"CL-{i + 1:05d}" for i in lista.index],
+        'Status': lista['loan_status'].map({1: '🔴 Rău platnic', 0: '🟢 Bun platnic'}),
+        'Vârstă': lista['person_age'],
+        'Venit anual ($)': lista['person_income'],
+        'Locuință': lista['person_home_ownership'],
+        'Tipul creditului': lista['loan_intent'],
+        'Grad de risc': lista['loan_grade'],
+        'Suma creditului ($)': lista['loan_amnt'],
+        'Dobândă (%)': lista['loan_int_rate'],
+        'Rata din venit (%)': lista['loan_percent_income'] * 100,
+        'Istoric de neplată': lista['cb_person_default_on_file'],
+    })
+
+    # Sortarea aleasă de utilizator (valorile lipsă ajung la final)
+    tabel_clienti = tabel_clienti.sort_values(
+        sortare, ascending=(ordine == "Crescător"), na_position='last'
+    )
+
+    st.caption(
+        f"{len(tabel_clienti):,} clienți, sortați după „{sortare}” ({ordine.lower()}). "
+        "Poți sorta și cu click pe numele unei coloane."
+    )
+    st.dataframe(
+        tabel_clienti,
+        hide_index=True,
+        height=400,
+        column_config={
+            'Venit anual ($)': st.column_config.NumberColumn(format="localized"),
+            'Suma creditului ($)': st.column_config.NumberColumn(format="localized"),
+            'Dobândă (%)': st.column_config.NumberColumn(format="%.2f%%"),
+            'Rata din venit (%)': st.column_config.NumberColumn(format="%.0f%%"),
+        },
+    )
+
+    st.download_button(
+        "Descarcă lista (CSV)",
+        data=tabel_clienti.to_csv(index=False).encode('utf-8-sig'),
+        file_name="clienti_segment.csv",
+        mime="text/csv",
+    )

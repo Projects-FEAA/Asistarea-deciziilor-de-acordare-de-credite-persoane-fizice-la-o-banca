@@ -3,7 +3,7 @@ import pandas as pd
 from module.data_loader import load_data
 import module.cerinta_1_pondere as c1 
 import module.cerinta_2_risc as c2 # Le vei decomenta când le creezi
-# import module.cerinta_3_trend as c3
+import module.cerinta_3_trend as c3
 import module.cerinta_4_dobanzi as c4
 
 # 1. Configurare pagină (trebuie să fie prima comandă, setează lățimea pe tot ecranul)
@@ -92,6 +92,9 @@ elif optiune == "1. Ponderea Creditelor":
     
 elif optiune == "2. Analiză Rău-Platnici":
     c2.render_page(df)
+
+elif optiune == "3. Evoluție Volum":
+    c3.render_page(df)
 
 elif optiune == "4. Impact Dobânzi":
     c4.render_page(df)

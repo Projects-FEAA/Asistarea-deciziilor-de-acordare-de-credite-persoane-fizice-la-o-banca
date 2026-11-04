@@ -1,0 +1,28 @@
+[server]
+runOnSave = true
+
+[client]
+toolbarMode = "minimal"
+
+[theme]
+base = "light"
+font = "sans serif"
+primaryColor = "#1f4e79"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f3f6fa"
+textColor = "#1c2b39"
+linkColor = "#1f4e79"
+borderColor = "#d9e1ea"
+showWidgetBorder = true
+baseRadius = "0.4rem"
+showSidebarBorder = true
+dataframeHeaderBackgroundColor = "#eef2f7"
+dataframeHeaderTextColor = "#1f4e79"
+chartCategoricalColors = ["#1f4e79", "#4a7fb0", "#8fb3d9", "#e67e22", "#7f8c8d", "#16a085", "#c0392b"]
+
+[theme.sidebar]
+backgroundColor = "#0f2a44"
+secondaryBackgroundColor = "#1a3a5c"
+textColor = "#ffffff"
+primaryColor = "#8fb3d9"
+borderColor = "#2c4d70"

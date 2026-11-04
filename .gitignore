@@ -9,9 +9,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Cache Streamlit
-.streamlit/
-
 # Fișier de confidențialitate sau setări locale (dacă e cazul)
 .env
 
