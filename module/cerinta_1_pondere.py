@@ -16,52 +16,39 @@ def render_page(df):
     st.markdown("Analiza distribuției portofoliului de credite acordate persoanelor fizice, cu opțiuni de filtrare și vizualizare dinamică.")
     
     # --- FILTRE INTERACTIVE (SPECIFICE ACESTEI PAGINI) ---
-    filterCol1, filterCol2, filterCol3, filterCol4 = st.columns(4)
+    with st.container(border=True):
+        st.markdown("**Filtre**")
 
-    with filterCol1:
-        # 1. Slider pentru vârstă
-        min_v, max_v = int(df['person_age'].min()), int(df['person_age'].max())
-        interval_varsta = st.slider("Selectează intervalul de vârstă", min_v, max_v, (min_v, max_v), key="c1_age")
+        r1c1, r1c2 = st.columns(2)
+        with r1c1:
+            min_v, max_v = int(df['person_age'].min()), int(df['person_age'].max())
+            interval_varsta = st.slider("Vârstă", min_v, max_v, (min_v, max_v), key="c1_age")
+        with r1c2:
+            locuinte = ["Toate"] + sorted(df['person_home_ownership'].unique())
+            locuinta_aleasa = st.selectbox("Statutul locuinței", locuinte, key="c1_home")
 
-    with filterCol2:
-        # 2. Selectbox pentru statutul locuinței
-        locuinte = ["Toate"] + list(df['person_home_ownership'].unique())
-        locuinta_aleasa = st.selectbox("Statut locuință", locuinte, key="c1_home")
-
-    with filterCol3:
-        # 3. Multiselect (combo box) pentru scopul creditului - implicit sunt toate selectate
-        scopuri = sorted(df['loan_intent'].dropna().unique())
-        scop_ales = st.multiselect(
-            "Scopul Creditului:",
-            options=scopuri,
-            default=scopuri,
-            key="c1_intent",
-            placeholder="Alege unul sau mai multe scopuri"
-        )
-
-    with filterCol4:
-        # 4. Multiselect pentru intervalele de venit anual - implicit sunt toate selectate
-        intervale_venit = list(INTERVALE_VENIT.keys())
-        venituri_alese = st.multiselect(
-            "Interval de venit anual",
-            options=intervale_venit,
-            default=intervale_venit,
-            key="c1_income",
-            placeholder="Alege unul sau mai multe intervale"
-        )
+        r2c1, r2c2 = st.columns(2)
+        with r2c1:
+            # gol = toate intervalele
+            venituri_alese = st.multiselect(
+                "Venit anual", list(INTERVALE_VENIT.keys()), key="c1_income", placeholder="Toate"
+            )
+        with r2c2:
+            # gol = toate scopurile
+            scopuri_alese = st.multiselect(
+                "Tipul creditului", sorted(df['loan_intent'].dropna().unique()), key="c1_intent", placeholder="Toate"
+            )
 
     # --- APLICAREA FILTRELOR PE DATAFRAME ---
-    df_f = df[
-        (df['person_age'] >= interval_varsta[0]) & 
-        (df['person_age'] <= interval_varsta[1])
-    ]
+    df_f = df[df['person_age'].between(interval_varsta[0], interval_varsta[1])]
+
     if locuinta_aleasa != "Toate":
         df_f = df_f[df_f['person_home_ownership'] == locuinta_aleasa]
 
-    df_f = df_f[df_f['loan_intent'].isin(scop_ales)]
+    if scopuri_alese:
+        df_f = df_f[df_f['loan_intent'].isin(scopuri_alese)]
 
-    # Dacă sunt selectate toate intervalele, nu filtrăm (rămân și rândurile fără venit)
-    if len(venituri_alese) < len(intervale_venit):
+    if venituri_alese:
         masca_venit = pd.Series(False, index=df_f.index)
         for eticheta in venituri_alese:
             v_min, v_max = INTERVALE_VENIT[eticheta]
@@ -76,52 +63,53 @@ def render_page(df):
     # --- AGREGAREA DATELOR ---
     pondere_df = df_f['loan_intent'].value_counts().reset_index()
     pondere_df.columns = ['Destinație Credit', 'Număr Credite']
-    
+
     total_credite = pondere_df['Număr Credite'].sum()
     pondere_df['Procent (%)'] = (pondere_df['Număr Credite'] / total_credite * 100).round(2)
 
-    
-    # --- LAYOUT PRINCIPAL: TABEL + GRAFIC ---
-    
-    st.subheader("Date Tabelare Agregate")
-    st.dataframe(pondere_df, use_container_width=True, hide_index=True)
-    st.metric("Total Credite (filtrate)", f"{total_credite:,}")
-    
-    st.subheader("Reprezentare Vizuală")
+    # --- CIFRA PRINCIPALĂ ---
+    st.metric("Total credite (filtrate)", f"{total_credite:,}")
+
+    # --- GRAFICUL ---
+    st.divider()
 
     tip_chart = st.selectbox(
-        "Alege tipul de reprezentare grafică:",
-        ["Grafic Circular (Donut)", "Grafic cu Bare (Bar Chart)", "Hartă Proporțională (Treemap)"]
+        "Tipul de grafic:",
+        ["Grafic Circular (Donut)", "Grafic cu Bare (Bar Chart)", "Hartă Proporțională (Treemap)"],
+        key="c1_chart",
     )
-    
-    # Generarea dinamică a graficului în funcție de selecția utilizatorului
+
     if tip_chart == "Grafic Circular (Donut)":
+        st.caption("Ce pondere are fiecare destinație în totalul creditelor.")
         fig = px.pie(
-            pondere_df, 
-            values='Număr Credite', 
+            pondere_df,
+            values='Număr Credite',
             names='Destinație Credit',
             hole=0.4,
-            title="Ponderea creditelor pe destinații"
         )
         fig.update_traces(textposition='inside', textinfo='percent+label')
-        
+
     elif tip_chart == "Grafic cu Bare (Bar Chart)":
+        st.caption("Numărul de credite pe fiecare destinație.")
         fig = px.bar(
-            pondere_df, 
-            x='Destinație Credit', 
+            pondere_df,
+            x='Destinație Credit',
             y='Număr Credite',
             text='Procent (%)',
             color='Destinație Credit',
-            title="Numărul de credite pe categorii"
         )
         fig.update_traces(texttemplate='%{text}%', textposition='outside')
-        
-    else: # Treemap
+
+    else:  # Treemap
+        st.caption("Mărimea dreptunghiului = numărul de credite.")
         fig = px.treemap(
             pondere_df,
             path=['Destinație Credit'],
             values='Număr Credite',
-            title="Ponderea ierarhică a creditelor"
         )
-        
+
+    fig.update_layout(height=400, margin=dict(l=0, r=0, t=30, b=0))
     st.plotly_chart(fig, use_container_width=True)
+
+    with st.expander("Vezi cifrele detaliate"):
+        st.dataframe(pondere_df, use_container_width=True, hide_index=True)
