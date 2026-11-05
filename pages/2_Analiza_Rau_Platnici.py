@@ -48,7 +48,7 @@ with s1:
 with s2:
     tip_chart = st.selectbox(
         "Tipul de grafic:",
-        ["Grafic cu Bare (Bar Chart)", "Bare 100% (Bun vs. Rău platnic)", "Hartă Proporțională (Treemap)"],
+        ["Bar Chart", "Bare 100% (Bun vs. Rău platnic)", "Treemap"],
         key="c2_chart",
     )
 coloana = criterii[criteriu_ales]
@@ -66,7 +66,7 @@ analiza.columns = [criteriu_ales, 'Clienți', 'Rău platnici', 'Rata de neplată
 ordine_categorii = list(analiza[criteriu_ales])[::-1]
 
 # --- GRAFICUL: toate variantele arată riscul fiecărei categorii ---
-if tip_chart == "Grafic cu Bare (Bar Chart)":
+if tip_chart == "Bar Chart":
     st.caption("Ce procent din clienții fiecărei categorii nu și-au plătit creditul. Linia punctată = media generală.")
     fig = px.bar(
         analiza,

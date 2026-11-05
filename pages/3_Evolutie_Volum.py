@@ -52,7 +52,7 @@ with st.container(border=True):
     with p4:
         tip_chart = st.selectbox(
             "Tipul de grafic:",
-            ["Grafic cu Linie (Line Chart)", "Grafic cu Bare (Bar Chart)"],
+            ["Line Chart", "Bar Chart"],
             key="c3_chart",
         )
 
@@ -153,7 +153,7 @@ hover_prognoza = (
     + "<extra></extra>"
 )
 
-if tip_chart == "Grafic cu Linie (Line Chart)":
+if tip_chart == "Line Chart":
     fig.add_trace(go.Scatter(
         x=istoric['Eticheta'], y=istoric[coloana], mode='lines+markers',
         name='Istoric (real)', line=dict(color='#1f4e79'), hovertemplate=hover_istoric,

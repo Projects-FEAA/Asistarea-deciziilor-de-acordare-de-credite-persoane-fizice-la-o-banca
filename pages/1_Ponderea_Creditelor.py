@@ -31,11 +31,11 @@ st.divider()
 
 tip_chart = st.selectbox(
     "Tipul de grafic:",
-    ["Grafic Circular (Donut)", "Grafic cu Bare (Bar Chart)", "Hartă Proporțională (Treemap)"],
+    ["Pie Chart", "Bar Chart", "Treemap"],
     key="c1_chart",
 )
 
-if tip_chart == "Grafic Circular (Donut)":
+if tip_chart == "Pie Chart":
     st.caption("Ce pondere are fiecare destinație în totalul creditelor.")
     fig = px.pie(
         pondere_df,
@@ -45,7 +45,7 @@ if tip_chart == "Grafic Circular (Donut)":
     )
     fig.update_traces(textposition='inside', textinfo='percent+label')
 
-elif tip_chart == "Grafic cu Bare (Bar Chart)":
+elif tip_chart == "Bar Chart":
     st.caption("Numărul de credite pe fiecare destinație.")
     fig = px.bar(
         pondere_df,
