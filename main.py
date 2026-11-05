@@ -16,7 +16,7 @@ df = load_data()
 st.sidebar.title("Navigare SAD")
 optiune = st.sidebar.radio(
     "Alege secțiunea:",
-    ["Baza de Date (Grid)", 
+    ["Baza de Date", 
      "1. Ponderea Creditelor", 
      "2. Analiză Rău-Platnici", 
      "3. Evoluție Volum", 
@@ -24,52 +24,45 @@ optiune = st.sidebar.radio(
 )
 
 # 4. Logica de afișare pentru prima pagină
-if optiune == "Baza de Date (Grid)":
-    st.title("Explorarea Bazei de Date")
-    st.write("Folosește filtrele pentru a restrânge setul de date. **Click pe numele coloanelor pentru a sorta tabelul.**")
-    
-    f1, f2, f3, f4 = st.columns(4)
+if optiune == "Baza de Date":
+    st.title("Baza de Date")
 
-    with f1:
-        # Filtru Multiselect (Combo Box)
-        scopuri = df['loan_intent'].unique()
-        scop_ales = st.multiselect("Scopul Creditului:", options=scopuri, default=scopuri)
+    # --- FILTRE (în chenar, 2 rânduri a câte 2) ---
+    with st.container(border=True):
+        st.markdown("**Filtre**")
 
-    with f2:
-        # Filtru Slider (Interval valori)
-        varsta_min, varsta_max = int(df['person_age'].min()), int(df['person_age'].max())
-        varsta_interval = st.slider("Interval Vârstă:", varsta_min, varsta_max, (20, 50))
+        r1c1, r1c2 = st.columns(2)
+        with r1c1:
+            varsta_min, varsta_max = int(df['person_age'].min()), int(df['person_age'].max())
+            varsta_interval = st.slider(
+                "Vârstă", varsta_min, varsta_max, (varsta_min, varsta_max), key="db_age"
+            )
+        with r1c2:
+            proprietati = ["Toate"] + sorted(df['person_home_ownership'].unique())
+            proprietate_aleasa = st.selectbox("Statutul locuinței", proprietati, key="db_home")
 
-    with f3:
-        # Filtru Selectbox (O singură opțiune)
-        proprietate = df['person_home_ownership'].unique().tolist()
-        proprietate.insert(0, "Toate") # Adăugăm opțiunea de a nu filtra
-        proprietate_aleasa = st.selectbox("Statut Locuință:", options=proprietate)
+        r2c1, r2c2 = st.columns(2)
+        with r2c1:
+            # gol = toate intervalele
+            venituri_alese = st.multiselect(
+                "Venit anual", list(c1.INTERVALE_VENIT.keys()), key="db_income", placeholder="Toate"
+            )
+        with r2c2:
+            # gol = toate scopurile
+            scopuri_alese = st.multiselect(
+                "Tipul creditului", sorted(df['loan_intent'].unique()), key="db_intent", placeholder="Toate"
+            )
 
-    with f4:
-        # Filtru Multiselect pentru intervalele de venit anual - implicit sunt toate selectate
-        # (intervalele sunt definite o singură dată, în modulul paginii 1)
-        intervale_venit = list(c1.INTERVALE_VENIT.keys())
-        venituri_alese = st.multiselect(
-            "Interval Venit Anual:",
-            options=intervale_venit,
-            default=intervale_venit
-        )
-
-    
     # --- APLICAREA FILTRELOR PE PANDAS ---
-    # Creăm o mască de filtrare
-    df_filtrat = df[
-        (df['loan_intent'].isin(scop_ales)) &
-        (df['person_age'] >= varsta_interval[0]) &
-        (df['person_age'] <= varsta_interval[1])
-    ]
-    
+    df_filtrat = df[df['person_age'].between(varsta_interval[0], varsta_interval[1])]
+
     if proprietate_aleasa != "Toate":
         df_filtrat = df_filtrat[df_filtrat['person_home_ownership'] == proprietate_aleasa]
 
-    # Dacă sunt selectate toate intervalele, nu filtrăm (rămân și rândurile fără venit)
-    if len(venituri_alese) < len(intervale_venit):
+    if scopuri_alese:
+        df_filtrat = df_filtrat[df_filtrat['loan_intent'].isin(scopuri_alese)]
+
+    if venituri_alese:
         masca_venit = pd.Series(False, index=df_filtrat.index)
         for eticheta in venituri_alese:
             v_min, v_max = c1.INTERVALE_VENIT[eticheta]
@@ -78,13 +71,11 @@ if optiune == "Baza de Date (Grid)":
                 (df_filtrat['person_income'] < v_max)
             )
         df_filtrat = df_filtrat[masca_venit]
-        
+
     # --- AFIȘAREA GRID-ULUI ---
-    # use_container_width întinde grid-ul pe tot ecranul, hide_index ascunde numerele de rând inutile
     st.dataframe(df_filtrat, use_container_width=True, hide_index=True)
-    
-    # Sumarizare simplă la baza tabelului
-    st.caption(f"Afișăm {len(df_filtrat)} din totalul de {len(df)} credite pe baza filtrelor aplicate.")
+
+    st.caption(f"Afișăm {len(df_filtrat):,} din totalul de {len(df):,} credite pe baza filtrelor aplicate.")
 
 # Logica de direcționare către modulele voastre viitoare
 elif optiune == "1. Ponderea Creditelor":
