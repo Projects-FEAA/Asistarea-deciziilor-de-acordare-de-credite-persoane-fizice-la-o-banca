@@ -13,7 +13,7 @@ INTERVALE_VENIT = {
 
 def render_page(df):
     st.title("1. Ponderea tipurilor de credit")
-    st.markdown("Analiza distribuției portofoliului de credite acordate persoanelor fizice, cu opțiuni de filtrare și vizualizare dinamică.")
+    st.markdown("Evidentierea ponderii fiecarui tip de credit (consum, auto, nevoi personale etc.) in total credite acordate persoanelor fizice")
     
     # --- FILTRE INTERACTIVE (SPECIFICE ACESTEI PAGINI) ---
     with st.container(border=True):

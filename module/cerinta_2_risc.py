@@ -5,7 +5,7 @@ from module.cerinta_1_pondere import INTERVALE_VENIT
 
 
 def render_page(df):
-    st.title("2. Evidențierea clienților rău platnici")
+    st.title("2. Evidențierea clienților rău/platnici")
     st.markdown("Ce tipuri de clienți au cea mai mare probabilitate să nu își plătească creditul.")
 
     # --- FILTRE (2 rânduri a câte 2) ---

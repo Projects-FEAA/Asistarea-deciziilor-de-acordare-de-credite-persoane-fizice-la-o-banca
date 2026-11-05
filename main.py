@@ -13,7 +13,7 @@ st.set_page_config(page_title="Sistem Asistare Decizii Credite", layout="wide")
 df = load_data()
 
 # 3. Meniul principal de navigare în bara laterală
-st.sidebar.title("Navigare SAD")
+st.sidebar.title("Navigare")
 optiune = st.sidebar.radio(
     "Alege secțiunea:",
     ["Baza de Date", 
@@ -25,7 +25,7 @@ optiune = st.sidebar.radio(
 
 # 4. Logica de afișare pentru prima pagină
 if optiune == "Baza de Date":
-    st.title("Baza de Date")
+    st.title("Asistarea deciziilor de acordare de credite persoane fizice la o banca")
 
     # --- FILTRE (în chenar, 2 rânduri a câte 2) ---
     with st.container(border=True):

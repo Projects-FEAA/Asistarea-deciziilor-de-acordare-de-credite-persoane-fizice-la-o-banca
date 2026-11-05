@@ -41,7 +41,7 @@ def _limite(intervale):
 
 def render_page(df):
     st.title("4. Estimarea cererii în funcție de dobândă")
-    st.markdown("Impactul variației ratei dobânzii asupra volumului total de credite solicitate.")
+    st.markdown("Estimarea cererii de credite in cazul reducerii/cresterii dobanzii")
 
     # ------------------------------------------------------------------
     # FILTRE: tipul creditului + vârsta + venitul

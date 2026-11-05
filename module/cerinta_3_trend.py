@@ -19,10 +19,7 @@ GRANULARITATE = {
 
 def render_page(df):
     st.title("3. Estimarea volumului de credite pentru perioada următoare")
-    st.markdown(
-        "Pe baza creditelor deja acordate calculăm **trendul** și estimăm "
-        "volumul de credite din perioadele următoare."
-    )
+    st.markdown("Estimarea volumului de credite ce se vor acorda in perioada urmatoare, in functie de creditele deja acordate si de trendul estimat")
 
     # Luna fiecărui credit, sub formă de text: "2021-01", "2021-02" ...
     luna_credit = df['loan_date'].dt.to_period('M').astype(str)
